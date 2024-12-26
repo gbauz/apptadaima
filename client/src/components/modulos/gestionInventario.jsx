@@ -1,122 +1,120 @@
-import React, { useState } from "react";
-import "bootstrap/dist/css/bootstrap.min.css";
+import React, { useState, useEffect } from "react";
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 function App() {
-  const [movements, setMovements] = useState([]);
+  const [products, setProducts] = useState([]);
   const [formData, setFormData] = useState({
-    type: "Entrada", // Tipo por defecto
-    product: "",
-    quantity: "",
-    date: new Date().toISOString().split("T")[0], // Fecha actual por defecto
-    reason: "",
+    id: "",
+    name: "",
+    category: "",
+    price: "",
+    stock: "",
+    description: "",
   });
-  const [filters, setFilters] = useState({
-    type: "",
-    product: "",
-    date: "",
-  });
+  const [isEditing, setIsEditing] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [alertStockLow, setAlertStockLow] = useState(false);
 
-  // Abrir y cerrar modal
-  const handleOpenModal = () => setShowModal(true);
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setFormData({
-      type: "Entrada",
-      product: "",
-      quantity: "",
-      date: new Date().toISOString().split("T")[0],
-      reason: "",
+  // Verificar si algún producto tiene stock bajo
+  useEffect(() => {
+    products.forEach((product) => {
+      if (product.stock < 5) {
+        setAlertStockLow(true);
+      }
     });
-  };
+  }, [products]);
 
-  // Manejar envío de formulario
   const handleSubmit = (e) => {
     e.preventDefault();
-    setMovements((prev) => [
-      ...prev,
-      {
-        ...formData,
-        id: Date.now().toString(),
-      },
-    ]);
-    handleCloseModal();
+    if (isEditing) {
+      setProducts((prev) =>
+        prev.map((product) =>
+          product.id === formData.id ? { ...formData } : product
+        )
+      );
+      setIsEditing(false);
+    } else {
+      setProducts((prev) => [
+        ...prev,
+        { ...formData, id: Date.now().toString() },
+      ]);
+    }
+    resetForm();
   };
 
-  // Manejar filtros
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
-    setFilters((prev) => ({ ...prev, [name]: value }));
+  const handleDelete = (id) => {
+    setProducts((prev) => prev.filter((product) => product.id !== id));
   };
 
-  const filteredMovements = movements.filter((movement) => {
-    return (
-      (!filters.type || movement.type === filters.type) &&
-      (!filters.product || movement.product.includes(filters.product)) &&
-      (!filters.date || movement.date === filters.date)
+  const handleEdit = (product) => {
+    setFormData(product);
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleOpenModal = () => {
+    setShowModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    resetForm();
+  };
+
+  // Restablecer el formulario
+  const resetForm = () => {
+    setFormData({
+      id: "",
+      name: "",
+      category: "",
+      price: "",
+      stock: "",
+      description: "",
+    });
+    setShowModal(false);
+  };
+
+  // Ajustes manuales de inventario (entradas y salidas)
+  const handleStockChange = (id, change) => {
+    setProducts((prev) =>
+      prev.map((product) =>
+        product.id === id
+          ? { ...product, stock: parseInt(product.stock) + change }
+          : product
+      )
     );
-  });
-
-  // Modal arrastrable
-  const dragModal = (e) => {
-    const modalElement = document.getElementById("modal");
-    let offsetX = e.clientX - modalElement.getBoundingClientRect().left;
-    let offsetY = e.clientY - modalElement.getBoundingClientRect().top;
-
-    const moveModal = (moveEvent) => {
-      const x = moveEvent.clientX - offsetX;
-      const y = moveEvent.clientY - offsetY;
-
-      modalElement.style.left = `${x}px`;
-      modalElement.style.top = `${y}px`;
-    };
-
-    const stopDrag = () => {
-      document.removeEventListener("mousemove", moveModal);
-      document.removeEventListener("mouseup", stopDrag);
-    };
-
-    document.addEventListener("mousemove", moveModal);
-    document.addEventListener("mouseup", stopDrag);
   };
 
   return (
     <div className="container mt-4">
-      <h1 className="text-center">Gestión de Inventarios</h1>
+      <h1 className="text-center">Gestión de Inventario - Tienda de Manga</h1>
 
       <button className="btn btn-primary mb-4" onClick={handleOpenModal}>
-        Registrar Movimiento
+        Agregar Manga
       </button>
 
-      {/* Modal para movimientos */}
+      {/* Modal para agregar/editar manga */}
       <div
-        className={`modal ${showModal ? "show" : ""}`}
+        className={`modal ${showModal ? 'show' : ''}`}
         style={{
-          display: showModal ? "block" : "none",
-          position: "fixed",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "80%",
+          display: showModal ? 'block' : 'none',
+          position: 'fixed',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '90%',
           zIndex: 1050,
-          borderRadius: "5px",
         }}
-        id="modal"
         tabIndex="-1"
-        onMouseDown={dragModal}
+        aria-labelledby="exampleModalLabel"
+        aria-hidden="true"
       >
         <div className="modal-dialog">
-          <div className="modal-content" style={{ borderRadius: "5px" }}>
-            <div
-              className="modal-header"
-              style={{
-                cursor: "move",
-                backgroundColor: "#f8f9fa",
-                borderTopLeftRadius: "5px",
-                borderTopRightRadius: "5px",
-              }}
-            >
-              <h5 className="modal-title">Registrar Movimiento</h5>
+          <div className="modal-content" style={{ borderRadius: '5px' }}>
+            <div className="modal-header" style={{ cursor: 'move', backgroundColor: '#f8f9fa' }}>
+              <h5 className="modal-title" id="exampleModalLabel">
+                {isEditing ? "Editar Manga" : "Agregar Manga"}
+              </h5>
               <button
                 type="button"
                 className="btn-close"
@@ -125,84 +123,67 @@ function App() {
               ></button>
             </div>
             <form onSubmit={handleSubmit}>
-              <div
-                className="modal-body"
-                style={{ maxHeight: "400px", overflowY: "auto" }}
-              >
+              <div className="modal-body">
                 <div className="mb-3">
-                  <label className="form-label">Tipo de Movimiento</label>
-                  <select
-                    className="form-control"
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value })
-                    }
-                  >
-                    <option value="Entrada">Entrada</option>
-                    <option value="Salida">Salida</option>
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Producto</label>
+                  <label className="form-label">Nombre del Manga</label>
                   <input
                     type="text"
                     className="form-control"
-                    value={formData.product}
-                    onChange={(e) =>
-                      setFormData({ ...formData, product: e.target.value })
-                    }
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     required
                   />
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Cantidad</label>
+                  <label className="form-label">Categoría</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={formData.category}
+                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                    required
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label">Precio Unitario</label>
                   <input
                     type="number"
                     className="form-control"
-                    value={formData.quantity}
-                    onChange={(e) =>
-                      setFormData({ ...formData, quantity: e.target.value })
-                    }
+                    value={formData.price}
+                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                     required
                   />
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Fecha</label>
+                  <label className="form-label">Stock Disponible</label>
                   <input
-                    type="date"
+                    type="number"
                     className="form-control"
-                    value={formData.date}
-                    onChange={(e) =>
-                      setFormData({ ...formData, date: e.target.value })
-                    }
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
                     required
                   />
                 </div>
 
                 <div className="mb-3">
-                  <label className="form-label">Motivo</label>
+                  <label className="form-label">Descripción</label>
                   <textarea
                     className="form-control"
-                    value={formData.reason}
-                    onChange={(e) =>
-                      setFormData({ ...formData, reason: e.target.value })
-                    }
-                  ></textarea>
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    required
+                  />
                 </div>
               </div>
               <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={handleCloseModal}
-                >
+                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
                   Cerrar
                 </button>
                 <button type="submit" className="btn btn-primary">
-                  Guardar
+                  {isEditing ? "Actualizar" : "Agregar"}
                 </button>
               </div>
             </form>
@@ -210,64 +191,59 @@ function App() {
         </div>
       </div>
 
-      {/* Filtros */}
-      <h2>Filtros</h2>
-      <div className="row mb-3">
-        <div className="col-md-4">
-          <label>Tipo de Movimiento</label>
-          <select
-            className="form-control"
-            name="type"
-            value={filters.type}
-            onChange={handleFilterChange}
-          >
-            <option value="">Todos</option>
-            <option value="Entrada">Entrada</option>
-            <option value="Salida">Salida</option>
-          </select>
+      {/* Alerta de stock bajo */}
+      {alertStockLow && (
+        <div className="alert alert-warning" role="alert">
+          ¡Alerta! Algunos mangas tienen stock bajo. ¡Revísalos!
         </div>
-        <div className="col-md-4">
-          <label>Producto</label>
-          <input
-            type="text"
-            className="form-control"
-            name="product"
-            value={filters.product}
-            onChange={handleFilterChange}
-          />
-        </div>
-        <div className="col-md-4">
-          <label>Fecha</label>
-          <input
-            type="date"
-            className="form-control"
-            name="date"
-            value={filters.date}
-            onChange={handleFilterChange}
-          />
-        </div>
-      </div>
+      )}
 
-      {/* Historial */}
-      <h2>Historial de Movimientos</h2>
+      <h2>Lista de Mangas</h2>
       <table className="table table-bordered">
         <thead>
           <tr>
-            <th>Tipo</th>
-            <th>Producto</th>
-            <th>Cantidad</th>
-            <th>Fecha</th>
-            <th>Motivo</th>
+            <th>Nombre</th>
+            <th>Categoría</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Descripción</th>
+            <th>Acciones</th>
           </tr>
         </thead>
         <tbody>
-          {filteredMovements.map((movement) => (
-            <tr key={movement.id}>
-              <td>{movement.type}</td>
-              <td>{movement.product}</td>
-              <td>{movement.quantity}</td>
-              <td>{movement.date}</td>
-              <td>{movement.reason}</td>
+          {products.map((product) => (
+            <tr key={product.id}>
+              <td>{product.name}</td>
+              <td>{product.category}</td>
+              <td>${product.price}</td>
+              <td>{product.stock}</td>
+              <td>{product.description}</td>
+              <td>
+                <button
+                  className="btn btn-success btn-sm me-2"
+                  onClick={() => handleStockChange(product.id, 1)} // Entrada de stock
+                >
+                  Entrada
+                </button>
+                <button
+                  className="btn btn-danger btn-sm me-2"
+                  onClick={() => handleStockChange(product.id, -1)} // Salida de stock
+                >
+                  Salida
+                </button>
+                <button
+                  className="btn btn-warning btn-sm me-2"
+                  onClick={() => handleEdit(product)}
+                >
+                  Editar
+                </button>
+                <button
+                  className="btn btn-danger btn-sm"
+                  onClick={() => handleDelete(product.id)}
+                >
+                  Eliminar
+                </button>
+              </td>
             </tr>
           ))}
         </tbody>
