@@ -1,16 +1,67 @@
 import React, { useState } from 'react';
 import { Navbar, Nav, Container, Row, Col, Card, Dropdown, Image } from 'react-bootstrap';
 import 'bootstrap/dist/css/bootstrap.min.css';
-
+import CreacionProducto from './creacionProducto'; // Importa el componente que se mostrará al seleccionar "Usuarios"
+import ProveedorMangas from './proveedorMangas';
 function Dashboard() {
   const [user, setUser] = useState({
     name: 'Giovanni Bauz',
     avatar: 'https://via.placeholder.com/40',
   });
 
+  const [selectedOption, setSelectedOption] = useState('dashboard'); // Estado para controlar la opción seleccionada
+
   const handleLogout = () => {
     alert('Cerrando sesión...');
     // Lógica de cerrar sesión
+  };
+
+  // Función para renderizar contenido dinámico en el panel derecho
+  const renderContent = () => {
+    switch (selectedOption) {
+      case 'dashboard':
+        return (
+          <>
+            <h2 className="mb-4" style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>
+              Bienvenido, {user.name}
+            </h2>
+            <Row>
+              <Col md={4}>
+                <Card className="shadow-sm mb-4">
+                  <Card.Body>
+                    <h5>Usuarios</h5>
+                    <p className="display-4">123</p>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={4}>
+                <Card className="shadow-sm mb-4">
+                  <Card.Body>
+                    <h5>Reportes</h5>
+                    <p className="display-4">45</p>
+                  </Card.Body>
+                </Card>
+              </Col>
+              <Col md={4}>
+                <Card className="shadow-sm mb-4">
+                  <Card.Body>
+                    <h5>Ventas</h5>
+                    <p className="display-4">$12,345</p>
+                  </Card.Body>
+                </Card>
+              </Col>
+            </Row>
+          </>
+        );
+      case 'users':
+        return <CreacionProducto />; 
+      case 'proveedormanga':
+        return <ProveedorMangas />; 
+      case 'settings':
+        return <h2>Sección de Configuración</h2>;
+      default:
+        return <h2>Bienvenido al Sistema Administrativo</h2>;
+    }
   };
 
   return (
@@ -78,16 +129,16 @@ function Dashboard() {
           }}
         >
           <Nav className="flex-column">
-            <Nav.Link href="#dashboard" className="text-dark">
+            <Nav.Link onClick={() => setSelectedOption('dashboard')} className="text-dark">
               Dashboard
             </Nav.Link>
-            <Nav.Link href="#users" className="text-dark">
-              Usuarios
+            <Nav.Link onClick={() => setSelectedOption('users')} className="text-dark">
+              Registrar productos
             </Nav.Link>
-            <Nav.Link href="#reports" className="text-dark">
-              Reportes
+            <Nav.Link onClick={() => setSelectedOption('proveedormanga')} className="text-dark">
+              Registrar Proveedores
             </Nav.Link>
-            <Nav.Link href="#settings" className="text-dark">
+            <Nav.Link onClick={() => setSelectedOption('settings')} className="text-dark">
               Configuración
             </Nav.Link>
           </Nav>
@@ -95,35 +146,7 @@ function Dashboard() {
 
         {/* Contenido Principal */}
         <div className="p-4 flex-grow-1" style={{ backgroundColor: '#fff' }}>
-          <h2 className="mb-4" style={{ fontWeight: 'bold', fontSize: '1.5rem' }}>
-            Bienvenido, {user.name}
-          </h2>
-          <Row>
-            <Col md={4}>
-              <Card className="shadow-sm mb-4">
-                <Card.Body>
-                  <h5>Usuarios</h5>
-                  <p className="display-4">123</p>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="shadow-sm mb-4">
-                <Card.Body>
-                  <h5>Reportes</h5>
-                  <p className="display-4">45</p>
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col md={4}>
-              <Card className="shadow-sm mb-4">
-                <Card.Body>
-                  <h5>Ventas</h5>
-                  <p className="display-4">$12,345</p>
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
+          {renderContent()}
         </div>
       </div>
     </div>
