@@ -1,23 +1,53 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
+  const [correo, setCorreo] = useState('');
+  const [contraseña, setContraseña] = useState('');
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Inicio de sesión enviado');
+    
+    const loginData = { correo, contraseña };
+
+    try {
+      // Enviar credenciales al backend
+      const response = await fetch('http://localhost:3000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Almacenar el token JWT en el almacenamiento local
+        localStorage.setItem('token', data.token);
+        
+        // Redirigir al menú principal según el rol
+        if (data.rol_id === 1) {
+          navigate('/menuprincipal'); // Redirigir a la página de admin
+        } else if (data.rol_id === 2) {
+          navigate('/menuempleado'); // Redirigir a la página de empleado
+        } else {
+          setError('Rol desconocido'); // Manejo de rol no reconocido
+        }
+      } else {
+        setError(data.error || 'Error al iniciar sesión');
+      }
+    } catch (err) {
+      setError('Error de conexión');
+    }
   };
 
   return (
     <div style={styles.container}>
-      {/* Capa de overlay con color negro opaco */}
       <div style={styles.overlay}></div>
-
       <div style={styles.loginCard}>
-        {/* Imagen tipo logo */}
         <img
-          src="/imagenes/logotadaima.jpg" // Reemplaza con la URL de tu logo
+          src="/imagenes/logotadaima.jpg"
           alt="Logo"
           style={styles.logo}
         />
@@ -30,6 +60,8 @@ const Login = () => {
               id="email"
               placeholder="Ingresa tu correo"
               required
+              value={correo}
+              onChange={(e) => setCorreo(e.target.value)}
               style={styles.input}
             />
           </div>
@@ -40,13 +72,15 @@ const Login = () => {
               id="password"
               placeholder="Ingresa tu contraseña"
               required
+              value={contraseña}
+              onChange={(e) => setContraseña(e.target.value)}
               style={styles.input}
             />
           </div>
+          {error && <p style={styles.error}>{error}</p>}
           <button
-            type="button" // Cambiar a "button" para evitar que el formulario se envíe automáticamente
+            type="submit"
             style={styles.submitBtn}
-            onClick={() => navigate('/menuprincipal')} // Redirección directa
           >
             Iniciar Sesión
           </button>
@@ -58,7 +92,6 @@ const Login = () => {
     </div>
   );
 };
-
 // Estilos internos en el componente
 const styles = {
   container: {
