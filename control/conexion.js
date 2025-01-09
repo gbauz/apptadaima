@@ -1,4 +1,4 @@
-import mysql from 'mysql';  // Cambiar require por import
+const mysql = require('mysql');
 
 const db = mysql.createConnection({
     host: 'localhost',
@@ -15,4 +15,4 @@ db.connect((err) => {
     }
 });
 
-export default db;  // La exportación sigue siendo correcta
+module.exports = db;  // Usar module.exports en lugar de export default
