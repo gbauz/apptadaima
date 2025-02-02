@@ -3,7 +3,7 @@ import { Navbar, Nav, Container, Row, Col, Card, Dropdown, Image } from 'react-b
 import 'bootstrap/dist/css/bootstrap.min.css';
 import CreacionProducto from './creacionProducto'; 
 import ProveedorMangas from './proveedorMangas';
-
+import Configuracion from './configuracion';
 function Dashboard() {
   const [user, setUser] = useState({
     name: 'Giovanni Bauz',
@@ -71,7 +71,7 @@ function Dashboard() {
         case 'proveedormanga':
           return <ProveedorMangas />;
         case 'settings':
-          return <h2>Sección de Configuración</h2>;
+          return <Configuracion />;
         default:
           return <h2>Bienvenido al Sistema Administrativo</h2>;
       }

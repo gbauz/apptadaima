@@ -1,6 +1,5 @@
 const express = require('express');
 const path = require('path');
-const jwt = require('jsonwebtoken');
 const bodyParser = require('body-parser');
 const db = require('./control/conexion');
 const rutas = require('./control/rutas'); // Importamos las rutas
