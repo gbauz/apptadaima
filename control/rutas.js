@@ -1,9 +1,38 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const fs = require('fs');
+const path = require('path');
 const db = require('./conexion');
 const router = express.Router();
+const upload = require('express-fileupload');
 
-// Ruta de inicio de sesión
+// Middleware para manejo de archivos (imagenes)
+router.use(upload());
+
+// 🔹 Middleware para verificar token
+const verifyToken = (req, res, next) => {
+    const token = req.headers['authorization'];
+    if (!token) return res.status(403).json({ error: 'Token requerido' });
+
+    const tokenWithoutBearer = token.split(' ')[1];
+
+    jwt.verify(tokenWithoutBearer, 'secretKey', (err, decoded) => {
+        if (err) return res.status(401).json({ error: 'Token inválido' });
+
+        req.user = decoded;
+        next();
+    });
+};
+
+// 🔹 Middleware para verificar roles
+const authorizeRole = (allowedRoles) => (req, res, next) => {
+    if (!allowedRoles.includes(req.user.rol_id)) {
+        return res.status(403).json({ error: 'No tienes permisos para esta acción' });
+    }
+    next();
+};
+
+// 🔹 Ruta de Login
 router.post('/login', (req, res) => {
     const { correo, contraseña } = req.body;
 
@@ -13,7 +42,7 @@ router.post('/login', (req, res) => {
 
         const user = results[0];
 
-        // Comparar contraseñas directamente (solo para pruebas, idealmente usar un hash)
+        // Comparación de contraseñas en texto plano
         if (user.contraseña !== contraseña) {
             return res.status(401).json({ error: 'Credenciales inválidas' });
         }
@@ -24,70 +53,103 @@ router.post('/login', (req, res) => {
     });
 });
 
-// Middleware para verificar el token
-const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization']; // Se espera que el token esté en el header Authorization como Bearer <token>
-    if (!token) return res.status(403).json({ error: 'Token requerido' });
-
-    const tokenWithoutBearer = token.split(' ')[1]; // Obtener el token sin el prefijo "Bearer"
-
-    jwt.verify(tokenWithoutBearer, 'secretKey', (err, decoded) => {
-        if (err) return res.status(401).json({ error: 'Token inválido' });
-
-        req.user = decoded; // Almacenar la información del usuario decodificada del token
-        next();
-    });
-};
-
-// Middleware para autorizar roles
-const authorizeRole = (allowedRoles) => (req, res, next) => {
-    const { rol_id } = req.user;
-    if (!allowedRoles.includes(rol_id)) {
-        return res.status(403).json({ error: 'No tienes permisos para esta acción' });
-    }
-    next();
-};
-
-// Ruta para registrar proveedores (acceso solo para empleados)
-router.post('/registrar-proveedor', verifyToken, authorizeRole([2]), (req, res) => {
-    res.json({ message: 'Proveedor registrado correctamente' });
-});
-
-// Ruta para acciones de administrador (acceso solo para admins)
-router.get('/admin-options', verifyToken, authorizeRole([1]), (req, res) => {
-    res.json({ message: 'Opciones de administrador disponibles' });
-});
-
-// Ruta para actualizar la imagen de perfil
-router.post('/actualizar-imagen', verifyToken, (req, res) => {
+// 🔹 Ruta para obtener datos del usuario autenticado
+router.get('/user-data', verifyToken, (req, res) => {
     const userId = req.user.id;
-    const imagen = req.files.imagen; // Asumiendo que usas 'express-fileupload' o un middleware similar
 
-    // Subir imagen y actualizar en la base de datos (o guardar solo la URL si prefieres)
-    const imagePath = '/ruta/a/tu/carpeta/imagenes/' + imagen.name;
+    db.query('SELECT id, nombre, correo, rol_id, imagen FROM usuarios WHERE id = ?', [userId], (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error en el servidor' });
+        if (results.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
 
-    db.query('UPDATE usuarios SET imagen = ? WHERE id = ?', [imagePath, userId], (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error al actualizar la imagen' });
+        res.json(results[0]);
+    });
+});
 
-        // Guardar la imagen en el servidor (reemplaza con tu propia lógica)
-        imagen.mv('./uploads/' + imagen.name, (err) => {
+// 🔹 Ruta para actualizar datos del usuario
+router.put('/update-user', verifyToken, (req, res) => {
+    const { nombre, correo, contraseña, rol_id } = req.body;
+    const userId = req.user.id;
+    const updatedData = {};
+
+    // Actualizar los datos proporcionados
+    if (nombre) updatedData.nombre = nombre;
+    if (correo) updatedData.correo = correo;
+    if (contraseña) updatedData.contraseña = contraseña;
+    if (rol_id) updatedData.rol_id = rol_id;
+
+    // Verificar si se subió una nueva imagen
+    if (req.files && req.files.imagen) {
+        const imagen = req.files.imagen;
+        const uploadDir = path.join(__dirname, '../uploads');
+        
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir);
+        }
+
+        const uploadPath = path.join(uploadDir, imagen.name);
+        imagen.mv(uploadPath, (err) => {
             if (err) return res.status(500).json({ error: 'Error al guardar la imagen' });
 
-            res.json({ message: 'Imagen actualizada correctamente' });
+            const imagePathDB = '/uploads/' + imagen.name;
+            updatedData.imagen = imagePathDB;
+
+            // Actualizar la base de datos con los nuevos datos
+            db.query('UPDATE usuarios SET ? WHERE id = ?', [updatedData, userId], (err, results) => {
+                if (err) return res.status(500).json({ error: 'Error al actualizar el usuario' });
+                if (results.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+                res.json({ message: 'Usuario actualizado correctamente', updatedData });
+            });
+        });
+    } else {
+        // Si no se subió una imagen, solo actualizamos los demás datos
+        db.query('UPDATE usuarios SET ? WHERE id = ?', [updatedData, userId], (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error al actualizar el usuario' });
+            if (results.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+            res.json({ message: 'Usuario actualizado correctamente', updatedData });
+        });
+    }
+});
+
+// 🔹 Ruta para actualizar imagen de perfil
+router.post('/actualizar-imagen', verifyToken, (req, res) => {
+    if (!req.files || !req.files.imagen) {
+        return res.status(400).json({ error: 'No se ha subido ninguna imagen' });
+    }
+
+    const imagen = req.files.imagen;
+    const userId = req.user.id;
+
+    const uploadDir = path.join(__dirname, '../uploads');
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir);
+    }
+
+    const uploadPath = path.join(uploadDir, imagen.name);
+
+    imagen.mv(uploadPath, (err) => {
+        if (err) return res.status(500).json({ error: 'Error al guardar la imagen' });
+
+        const imagePathDB = '/uploads/' + imagen.name;
+
+        db.query('UPDATE usuarios SET imagen = ? WHERE id = ?', [imagePathDB, userId], (err, results) => {
+            if (err) return res.status(500).json({ error: 'Error al actualizar la imagen en la BD' });
+            if (results.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+            res.json({ message: 'Imagen actualizada correctamente', imagePath: imagePathDB });
         });
     });
 });
 
-// Ruta para obtener los datos del usuario autenticado
-router.get('/user-data', verifyToken, (req, res) => {
-    const userId = req.user.id; // El ID del usuario está en el token
-    db.query('SELECT id, nombre, correo, rol_id FROM usuarios WHERE id = ?', [userId], (err, results) => {
-        if (err) return res.status(500).json({ error: 'Error en el servidor' });
-        if (results.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+// 🔹 Ruta para registrar proveedores (solo empleados)
+router.post('/registrar-proveedor', verifyToken, authorizeRole([2]), (req, res) => {
+    res.json({ message: 'Proveedor registrado correctamente' });
+});
 
-        const user = results[0];
-        res.json({ nombre: user.nombre, correo: user.correo, rol_id: user.rol_id });
-    });
+// 🔹 Ruta para acciones de administrador
+router.get('/admin-options', verifyToken, authorizeRole([1]), (req, res) => {
+    res.json({ message: 'Opciones de administrador disponibles' });
 });
 
 module.exports = router;

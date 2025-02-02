@@ -10,31 +10,26 @@ const Configuracion = () => {
     imagen: null
   });
 
-  // Obtener los datos del usuario desde el backend
   useEffect(() => {
-    const token = localStorage.getItem("token"); // Asumiendo que el token está en el localStorage
-
+    const token = localStorage.getItem("token");
     if (token) {
       axios
         .get("http://localhost:3000/api/user-data", {
           headers: { Authorization: `Bearer ${token}` }
         })
         .then((response) => {
-          const { nombre, correo, rol_id } = response.data;
+          const { nombre, correo, rol_id, imagen } = response.data;
           setFormData((prevData) => ({
             ...prevData,
             nombre,
             correo,
-            rol: rol_id // Esto debe coincidir con el rol_id retornado desde el backend
+            rol: String(rol_id), // Convertir rol_id a string para evitar errores en el <select>
+            imagen: imagen || null // Si la imagen existe, la asignamos
           }));
         })
-        .catch((error) => {
-          console.error("Error al obtener los datos del usuario:", error);
-        });
-    } else {
-      console.log("No se encontró token en localStorage");
+        .catch((error) => console.error("Error al obtener los datos del usuario:", error));
     }
-  }, []); // Este useEffect solo se ejecutará una vez, cuando el componente se monte.
+  }, []);
 
   const handleChange = (e) => {
     if (e.target.name === "imagen") {
@@ -44,41 +39,58 @@ const Configuracion = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Datos enviados:", formData);
-
     const token = localStorage.getItem("token");
-
     if (!token) {
       console.error("Token no encontrado.");
       return;
     }
 
-    const formDataToSend = new FormData();
-    formDataToSend.append("nombre", formData.nombre);
-    formDataToSend.append("correo", formData.correo);
-    formDataToSend.append("contraseña", formData.contraseña);
-    formDataToSend.append("rol", formData.rol);
-    if (formData.imagen) {
-      formDataToSend.append("imagen", formData.imagen);
-    }
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append("nombre", formData.nombre);
+      formDataToSend.append("correo", formData.correo);
 
-    axios
-      .put("http://localhost:3000/api/update-user", formDataToSend, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data"
+      // Solo enviamos la contraseña si el usuario la modificó
+      if (formData.contraseña.trim() !== "") {
+        formDataToSend.append("contraseña", formData.contraseña); // Corrección: cambiar de "password" a "contraseña"
+      }
+
+      formDataToSend.append("rol", formData.rol);
+      if (formData.imagen) {
+        formDataToSend.append("imagen", formData.imagen);
+      }
+
+      console.log("Enviando datos:", Object.fromEntries(formDataToSend.entries())); // Ver en consola los datos enviados
+
+      const response = await axios.put(
+        "http://localhost:3000/api/update-user",
+        formDataToSend,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data"
+          }
         }
-      })
-      .then((response) => {
-        console.log("Usuario actualizado:", response.data);
-        // Aquí puedes agregar un mensaje de éxito o redireccionar a otro componente si es necesario.
-      })
-      .catch((error) => {
-        console.error("Error al actualizar el usuario:", error);
-        // Aquí puedes agregar un mensaje de error si lo deseas.
-      });
+      );
+
+      console.log("Usuario actualizado:", response.data);
+      alert("Datos actualizados correctamente");
+
+      // Si el backend devuelve los datos actualizados, los reflejamos en el estado
+      const { nombre, correo, rol_id, imagen } = response.data;
+      setFormData((prevData) => ({
+        ...prevData,
+        nombre,
+        correo,
+        rol: String(rol_id),
+        imagen: imagen || null, // Actualizamos la imagen
+      }));
+    } catch (error) {
+      console.error("Error al actualizar el usuario:", error.response?.data || error.message);
+      alert("Hubo un error al actualizar los datos.");
+    }
   };
 
   return (
@@ -108,14 +120,13 @@ const Configuracion = () => {
           />
         </div>
         <div className="mb-4">
-          <label className="block text-gray-700">Contraseña</label>
+          <label className="block text-gray-700">Contraseña (opcional)</label>
           <input
             type="password"
             name="contraseña"
             value={formData.contraseña}
             onChange={handleChange}
             className="w-full p-2 border rounded"
-            required
           />
         </div>
         <div className="mb-4">
@@ -143,10 +154,7 @@ const Configuracion = () => {
             accept="image/*"
           />
         </div>
-        <button
-          type="submit"
-          className="btn btn-warning btn-sm me-2"
-        >
+        <button type="submit" className="btn btn-warning btn-sm me-2">
           Actualizar
         </button>
       </form>
