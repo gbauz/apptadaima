@@ -4,10 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const db = require('./conexion');
 const router = express.Router();
-const upload = require('express-fileupload');
-
-// Middleware para manejo de archivos (imagenes)
-router.use(upload());
 
 // 🔹 Middleware para verificar token
 const verifyToken = (req, res, next) => {
@@ -67,21 +63,19 @@ router.get('/user-data', verifyToken, (req, res) => {
 
 // 🔹 Ruta para actualizar datos del usuario
 router.put('/update-user', verifyToken, (req, res) => {
-    const { nombre, correo, contraseña, rol_id } = req.body;
+    const { nombre, correo, contraseña, rol, imagen } = req.body;
     const userId = req.user.id;
-    const updatedData = {};
 
-    // Actualizar los datos proporcionados
+    // Verificar si se pasó alguna nueva contraseña
+    const updatedData = {};
     if (nombre) updatedData.nombre = nombre;
     if (correo) updatedData.correo = correo;
     if (contraseña) updatedData.contraseña = contraseña;
-    if (rol_id) updatedData.rol_id = rol_id;
+    if (rol) updatedData.rol_id = rol; // Si deseas cambiar el rol, puedes incluirlo aquí
 
-    // Verificar si se subió una nueva imagen
-    if (req.files && req.files.imagen) {
-        const imagen = req.files.imagen;
+    // Si hay imagen, manejarla por separado
+    if (imagen) {
         const uploadDir = path.join(__dirname, '../uploads');
-        
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir);
         }
@@ -93,7 +87,7 @@ router.put('/update-user', verifyToken, (req, res) => {
             const imagePathDB = '/uploads/' + imagen.name;
             updatedData.imagen = imagePathDB;
 
-            // Actualizar la base de datos con los nuevos datos
+            // Realizar actualización en la base de datos
             db.query('UPDATE usuarios SET ? WHERE id = ?', [updatedData, userId], (err, results) => {
                 if (err) return res.status(500).json({ error: 'Error al actualizar el usuario' });
                 if (results.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -102,7 +96,7 @@ router.put('/update-user', verifyToken, (req, res) => {
             });
         });
     } else {
-        // Si no se subió una imagen, solo actualizamos los demás datos
+        // Si no hay imagen, solo actualizamos los datos
         db.query('UPDATE usuarios SET ? WHERE id = ?', [updatedData, userId], (err, results) => {
             if (err) return res.status(500).json({ error: 'Error al actualizar el usuario' });
             if (results.affectedRows === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
@@ -121,6 +115,7 @@ router.post('/actualizar-imagen', verifyToken, (req, res) => {
     const imagen = req.files.imagen;
     const userId = req.user.id;
 
+    // Crear la carpeta 'uploads' si no existe
     const uploadDir = path.join(__dirname, '../uploads');
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir);
