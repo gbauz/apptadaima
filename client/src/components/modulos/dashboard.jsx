@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import { Navbar, Nav, Container, Row, Col, Card, Dropdown, Image } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import CreacionProducto from './creacionProducto';
 import ProveedorMangas from './proveedorMangas';
 import Configuracion from './configuracion';
+import axios from 'axios';
 
 function Dashboard() {
   const [user, setUser] = useState({
     name: "Cargando...",
-    avatar: "https://via.placeholder.com/40",
+    avatar: "/imagenes/logotadaima.jpg",  // Imagen estática
     rol_id: null,
   });
 
@@ -24,10 +24,10 @@ function Dashboard() {
           headers: { Authorization: `Bearer ${token}` },
         })
         .then((response) => {
-          const { nombre, rol_id, imagen } = response.data;
+          const { nombre, rol_id } = response.data;
           setUser({
             name: nombre,
-            avatar: imagen || "https://via.placeholder.com/40",
+            avatar: "/imagenes/logotadaima.jpg",  // Se mantiene la imagen estática
             rol_id,
           });
         })
@@ -44,10 +44,8 @@ function Dashboard() {
     window.location.reload();
   };
 
-  // Función para renderizar contenido dinámico en el panel derecho
   const renderContent = () => {
     if (user.rol_id === 1) {
-      // Administrador
       switch (selectedOption) {
         case "dashboard":
           return (
@@ -93,7 +91,6 @@ function Dashboard() {
           return <h2>Bienvenido al Sistema Administrativo</h2>;
       }
     } else if (user.rol_id === 2) {
-      // Empleado
       switch (selectedOption) {
         case "dashboard":
           return (
@@ -143,8 +140,9 @@ function Dashboard() {
                   {user.name}
                 </span>
               </Dropdown.Toggle>
+
               <Dropdown.Menu>
-                <Dropdown.Item href="#profile">Ver Perfil</Dropdown.Item>
+                <Dropdown.Item onClick={() => setSelectedOption("settings")}>Ver Perfil</Dropdown.Item>
                 <Dropdown.Divider />
                 <Dropdown.Item onClick={handleLogout}>Cerrar Sesión</Dropdown.Item>
               </Dropdown.Menu>
@@ -160,11 +158,9 @@ function Dashboard() {
               Dashboard
             </Nav.Link>
             {user.rol_id === 1 && (
-              <>
-                <Nav.Link onClick={() => setSelectedOption("users")} className="text-dark">
-                  Registrar productos
-                </Nav.Link>
-              </>
+              <Nav.Link onClick={() => setSelectedOption("users")} className="text-dark">
+                Registrar productos
+              </Nav.Link>
             )}
             <Nav.Link onClick={() => setSelectedOption("proveedormanga")} className="text-dark">
               Registrar Proveedores
@@ -174,7 +170,6 @@ function Dashboard() {
             </Nav.Link>
           </Nav>
         </div>
-
         <div className="p-4 flex-grow-1" style={{ backgroundColor: "#fff" }}>
           {renderContent()}
         </div>
