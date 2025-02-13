@@ -1,245 +1,151 @@
-import React, { useState } from "react";
-import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-function App() {
-  const [products, setProducts] = useState([]);
-  const [formData, setFormData] = useState({
-    id: "",
-    name: "",
-    category: "",
-    price: "",
-    stock: "",
-    description: "",
-  });
-  const [isEditing, setIsEditing] = useState(false);
-  const [showModal, setShowModal] = useState(false);
+const RegistrarProducto = () => {
+    const [nombre, setNombre] = useState('');
+    const [descripcion, setDescripcion] = useState('');
+    const [precio, setPrecio] = useState('');
+    const [stock, setStock] = useState('');
+    const [imagen, setImagen] = useState(null);
+    const [productos, setProductos] = useState([]);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (isEditing) {
-      setProducts((prev) =>
-        prev.map((product) =>
-          product.id === formData.id ? { ...formData } : product
-        )
-      );
-      setIsEditing(false);
-    } else {
-      setProducts((prev) => [
-        ...prev,
-        { ...formData, id: Date.now().toString() },
-      ]);
-    }
-    setFormData({
-      id: "",
-      name: "",
-      category: "",
-      price: "",
-      stock: "",
-      description: "",
-    });
-    setShowModal(false);
-  };
-
-  const handleDelete = (id) => {
-    setProducts((prev) => prev.filter((product) => product.id !== id));
-  };
-
-  const handleEdit = (product) => {
-    setFormData(product);
-    setIsEditing(true);
-    setShowModal(true);
-  };
-
-  const handleOpenModal = () => {
-    setShowModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setShowModal(false);
-    setFormData({
-      id: "",
-      name: "",
-      category: "",
-      price: "",
-      stock: "",
-      description: "",
-    });
-    setIsEditing(false);
-  };
-
-  // Función para hacer el modal arrastrable
-  const dragModal = (e) => {
-    const modalElement = document.getElementById('modal');
-    let offsetX = e.clientX - modalElement.getBoundingClientRect().left;
-    let offsetY = e.clientY - modalElement.getBoundingClientRect().top;
-
-    const moveModal = (moveEvent) => {
-      const x = moveEvent.clientX - offsetX;
-      const y = moveEvent.clientY - offsetY;
-
-      modalElement.style.left = `${x}px`;
-      modalElement.style.top = `${y}px`;
+    const handleImageChange = (e) => {
+        setImagen(e.target.files[0]);
     };
 
-    const stopDrag = () => {
-      document.removeEventListener('mousemove', moveModal);
-      document.removeEventListener('mouseup', stopDrag);
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append('nombre', nombre);
+        formData.append('descripcion', descripcion);
+        formData.append('precio', precio);
+        formData.append('stock', stock);
+        if (imagen) formData.append('imagen', imagen);
+
+        try {
+            const response = await axios.post('/api/productos', formData, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            alert(response.data.message);
+            fetchProductos();
+            setNombre('');
+            setDescripcion('');
+            setPrecio('');
+            setStock('');
+            setImagen(null);
+        } catch (error) {
+            console.error(error);
+            alert('Error al registrar el producto');
+        }
     };
 
-    document.addEventListener('mousemove', moveModal);
-    document.addEventListener('mouseup', stopDrag);
-  };
+    const fetchProductos = async () => {
+        try {
+            const response = await axios.get('/api/productos');
+            setProductos(response.data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
-  return (
-    <div className="container mt-4">
-      <h1 className="text-center">Gestión de Productos - Tienda de Manga</h1>
+    useEffect(() => {
+        fetchProductos();
+    }, []);
 
-      <button className="btn btn-primary mb-4" onClick={handleOpenModal}>
-        Agregar Producto
-      </button>
-
-      {/* Modal para agregar/editar producto */}
-      <div
-        className={`modal ${showModal ? 'show' : ''}`}
-        style={{
-          display: showModal ? 'block' : 'none',
-          position: 'fixed',
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '90%',  // Aumento el ancho del modal a 90%
-          zIndex: 1050,  // Para asegurar que el modal esté por encima de otros elementos
-          borderRadius: '5px',
-          backgroundColor: 'transparent',  // Sin fondo blanco dentro del modal
-        }}
-        id="modal"
-        tabIndex="-1"
-        aria-labelledby="exampleModalLabel"
-        aria-hidden="true"
-        onMouseDown={dragModal}  // Hacer el modal arrastrable
-      >
-        <div className="modal-dialog">
-          <div className="modal-content" style={{ borderRadius: '5px' }}>
-            <div className="modal-header" style={{ cursor: 'move', backgroundColor: '#f8f9fa', borderTopLeftRadius: '5px', borderTopRightRadius: '5px' }}>
-              <h5 className="modal-title" id="exampleModalLabel">
-                {isEditing ? "Editar Producto" : "Agregar Producto"}
-              </h5>
-              <button
-                type="button"
-                className="btn-close"
-                onClick={handleCloseModal}
-                aria-label="Close"
-              ></button>
+    return (
+        <div className="container mt-4">
+            <h2 className="text-center mb-4">Registrar Producto</h2>
+            <div className="card shadow p-4">
+                <form onSubmit={handleSubmit}>
+                    <div className="mb-3">
+                        <label className="form-label">Nombre</label>
+                        <input 
+                            type="text" 
+                            className="form-control" 
+                            placeholder="Nombre del producto" 
+                            value={nombre} 
+                            onChange={(e) => setNombre(e.target.value)} 
+                            required 
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Descripción</label>
+                        <textarea 
+                            className="form-control" 
+                            placeholder="Descripción" 
+                            value={descripcion} 
+                            onChange={(e) => setDescripcion(e.target.value)} 
+                            required 
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Precio</label>
+                        <input 
+                            type="number" 
+                            className="form-control" 
+                            placeholder="Precio" 
+                            value={precio} 
+                            onChange={(e) => setPrecio(e.target.value)} 
+                            required 
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Stock</label>
+                        <input 
+                            type="number" 
+                            className="form-control" 
+                            placeholder="Stock" 
+                            value={stock} 
+                            onChange={(e) => setStock(e.target.value)} 
+                            required 
+                        />
+                    </div>
+                    <div className="mb-3">
+                        <label className="form-label">Imagen</label>
+                        <input 
+                            type="file" 
+                            className="form-control" 
+                            onChange={handleImageChange} 
+                        />
+                    </div>
+                    <button type="submit" className="btn btn-primary w-100">Registrar</button>
+                </form>
             </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body" style={{ maxHeight: '400px', overflowY: 'auto' }}>
-                <div className="mb-3">
-                  <label className="form-label">Nombre del Producto</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    required
-                  />
-                </div>
 
-                <div className="mb-3">
-                  <label className="form-label">Categoría</label>
-                  <input
-                    type="text"
-                    className="form-control"
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Precio Unitario</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Stock Disponible</label>
-                  <input
-                    type="number"
-                    className="form-control"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Descripción</label>
-                  <textarea
-                    className="form-control"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
-                  Cerrar
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  {isEditing ? "Actualizar" : "Agregar"}
-                </button>
-              </div>
-            </form>
-          </div>
+            <h2 className="text-center mt-5">Productos Registrados</h2>
+            <div className="table-responsive">
+                <table className="table table-striped table-hover mt-3">
+                    <thead className="table-dark">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Descripción</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Imagen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {productos.map((producto) => (
+                            <tr key={producto.id}>
+                                <td>{producto.nombre}</td>
+                                <td>{producto.descripcion}</td>
+                                <td>${producto.precio}</td>
+                                <td>{producto.stock}</td>
+                                <td>
+                                    {producto.imagen ? (
+                                        <img src={producto.imagen} alt={producto.nombre} className="img-fluid rounded" width="50" />
+                                    ) : (
+                                        'Sin imagen'
+                                    )}
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
-      </div>
+    );
+};
 
-      <h2>Lista de Productos</h2>
-      <table className="table table-bordered">
-        <thead>
-          <tr>
-            <th>Nombre</th>
-            <th>Categoría</th>
-            <th>Precio</th>
-            <th>Stock</th>
-            <th>Descripción</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map((product) => (
-            <tr key={product.id}>
-              <td>{product.name}</td>
-              <td>{product.category}</td>
-              <td>${product.price}</td>
-              <td>{product.stock}</td>
-              <td>{product.description}</td>
-              <td>
-                <button
-                  className="btn btn-warning btn-sm me-2"
-                  onClick={() => handleEdit(product)}
-                >
-                  Editar
-                </button>
-                <button
-                  className="btn btn-danger btn-sm"
-                  onClick={() => handleDelete(product.id)}
-                >
-                  Eliminar
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-export default App;
+export default RegistrarProducto;

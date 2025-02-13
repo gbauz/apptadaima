@@ -4,6 +4,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import CreacionProducto from './creacionProducto';
 import ProveedorMangas from './proveedorMangas';
 import Configuracion from './configuracion';
+import Landing from './landing';
 import axios from 'axios';
 
 function Dashboard() {
@@ -84,7 +85,7 @@ function Dashboard() {
         case "users":
           return <CreacionProducto />;
         case "proveedormanga":
-          return <ProveedorMangas />;
+          return <Landing />;
         case "settings":
           return <Configuracion />;
         default:

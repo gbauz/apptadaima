@@ -151,5 +151,50 @@ router.post('/registrar-proveedor', verifyToken, authorizeRole([2]), (req, res) 
 router.get('/admin-options', verifyToken, authorizeRole([1]), (req, res) => {
     res.json({ message: 'Opciones de administrador disponibles' });
 });
+/**modulo productos */
+// Ruta para registrar un nuevo producto
+router.post('/productos', verifyToken, authorizeRole([1, 2]), (req, res) => {
+    const { nombre, descripcion, precio, stock } = req.body;
+    let imagen = null;
+
+    // Verificar si se subió una imagen
+    if (req.files && req.files.imagen) {
+        const imagenFile = req.files.imagen;
+        const uploadDir = path.join(__dirname, '../uploads');
+        
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir);
+        }
+
+        const imagenPath = path.join(uploadDir, imagenFile.name);
+        imagenFile.mv(imagenPath, (err) => {
+            if (err) return res.status(500).json({ error: 'Error al subir la imagen' });
+
+            imagen = '/uploads/' + imagenFile.name;
+            
+            // Guardar el producto en la base de datos
+            const query = 'INSERT INTO productos (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)';
+            db.query(query, [nombre, descripcion, precio, stock, imagen], (err, result) => {
+                if (err) return res.status(500).json({ error: 'Error al registrar el producto' });
+                res.json({ message: 'Producto registrado correctamente', productoId: result.insertId });
+            });
+        });
+    } else {
+        // Si no hay imagen, solo se guarda el producto
+        const query = 'INSERT INTO productos (nombre, descripcion, precio, stock) VALUES (?, ?, ?, ?)';
+        db.query(query, [nombre, descripcion, precio, stock], (err, result) => {
+            if (err) return res.status(500).json({ error: 'Error al registrar el producto' });
+            res.json({ message: 'Producto registrado correctamente', productoId: result.insertId });
+        });
+    }
+});
+/**obtener todos los productos */
+// Ruta para obtener todos los productos
+router.get('/productos', (req, res) => {
+    db.query('SELECT * FROM productos', (err, results) => {
+        if (err) return res.status(500).json({ error: 'Error al obtener los productos' });
+        res.json(results);
+    });
+});
 
 module.exports = router;
