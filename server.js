@@ -10,6 +10,9 @@ const PORT = 3000;
 // Middleware para analizar los cuerpos de las solicitudes (req.body)
 app.use(bodyParser.json());
 
+// Servir la carpeta 'uploads' como estática
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
 // Rutas de la API
 app.get('/api/message', (req, res) => {
     res.json({ message: 'Hola desde el backend de Express!' });

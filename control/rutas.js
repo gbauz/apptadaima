@@ -153,6 +153,7 @@ router.get('/admin-options', verifyToken, authorizeRole([1]), (req, res) => {
 });
 /**modulo productos */
 // Ruta para registrar un nuevo producto
+
 router.post('/productos', verifyToken, authorizeRole([1, 2]), (req, res) => {
     const { nombre, descripcion, precio, stock } = req.body;
     let imagen = null;
@@ -160,10 +161,10 @@ router.post('/productos', verifyToken, authorizeRole([1, 2]), (req, res) => {
     // Verificar si se subió una imagen
     if (req.files && req.files.imagen) {
         const imagenFile = req.files.imagen;
-        const uploadDir = path.join(__dirname, '../uploads');
+        const uploadDir = path.join(process.cwd(), 'uploads'); // Usa process.cwd() para obtener la raíz del proyecto
         
         if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir);
+            fs.mkdirSync(uploadDir, { recursive: true }); // Asegura la creación de la carpeta
         }
 
         const imagenPath = path.join(uploadDir, imagenFile.name);
@@ -172,7 +173,7 @@ router.post('/productos', verifyToken, authorizeRole([1, 2]), (req, res) => {
 
             imagen = '/uploads/' + imagenFile.name;
             
-            // Guardar el producto en la base de datos
+            // Guardar el producto en la base de datos con imagen
             const query = 'INSERT INTO productos (nombre, descripcion, precio, stock, imagen) VALUES (?, ?, ?, ?, ?)';
             db.query(query, [nombre, descripcion, precio, stock, imagen], (err, result) => {
                 if (err) return res.status(500).json({ error: 'Error al registrar el producto' });
