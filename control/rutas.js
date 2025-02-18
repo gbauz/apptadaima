@@ -197,5 +197,55 @@ router.get('/productos', (req, res) => {
         res.json(results);
     });
 });
+/*Ruta para actualizar producto*/
+router.put('/productos/:id', verifyToken, authorizeRole([1, 2]), (req, res) => {
+    const productId = req.params.id;
+    const { nombre, descripcion, precio, stock } = req.body;
+    let imagen = null;
+
+    if (req.files && req.files.imagen) {
+        const imagenFile = req.files.imagen;
+        const uploadDir = path.join(process.cwd(), 'uploads');
+        
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+
+        const imagenPath = path.join(uploadDir, imagenFile.name);
+        imagenFile.mv(imagenPath, (err) => {
+            if (err) return res.status(500).json({ error: 'Error al subir la imagen' });
+
+            imagen = '/uploads/' + imagenFile.name;
+            updateProduct(productId, { nombre, descripcion, precio, stock, imagen }, res);
+        });
+    } else {
+        updateProduct(productId, { nombre, descripcion, precio, stock }, res);
+    }
+});
+
+// Ruta para eliminar producto
+router.delete('/productos/:id', verifyToken, authorizeRole([1]), (req, res) => {
+    const productId = req.params.id;
+    
+    db.query('DELETE FROM productos WHERE id = ?', [productId], (err, result) => {
+        if (err) return res.status(500).json({ error: 'Error al eliminar el producto' });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+        res.json({ message: 'Producto eliminado correctamente' });
+    });
+});
+
+// Función auxiliar para actualizar producto
+function updateProduct(id, data, res) {
+    const query = 'UPDATE productos SET ? WHERE id = ?';
+    db.query(query, [data, id], (err, result) => {
+        if (err) return res.status(500).json({ error: 'Error al actualizar el producto' });
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ error: 'Producto no encontrado' });
+        }
+        res.json({ message: 'Producto actualizado correctamente' });
+    });
+}
 
 module.exports = router;

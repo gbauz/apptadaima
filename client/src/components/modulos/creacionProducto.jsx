@@ -8,6 +8,8 @@ const RegistrarProducto = () => {
     const [stock, setStock] = useState('');
     const [imagen, setImagen] = useState(null);
     const [productos, setProductos] = useState([]);
+    const [editingProduct, setEditingProduct] = useState(null);
+    const [editImagen, setEditImagen] = useState(null);
 
     const handleImageChange = (e) => {
         setImagen(e.target.files[0]);
@@ -24,19 +26,25 @@ const RegistrarProducto = () => {
         if (imagen) formData.append('imagen', imagen);
 
         try {
-            const response = await axios.post('/api/productos', formData, {
-                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-            });
-            alert(response.data.message);
+            if (editingProduct) {
+                // Actualizar producto existente
+                const response = await axios.put(`/api/productos/${editingProduct.id}`, formData, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                alert(response.data.message);
+            } else {
+                // Crear nuevo producto
+                const response = await axios.post('/api/productos', formData, {
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+                });
+                alert(response.data.message);
+            }
+
             fetchProductos();
-            setNombre('');
-            setDescripcion('');
-            setPrecio('');
-            setStock('');
-            setImagen(null);
+            clearForm();
         } catch (error) {
             console.error(error);
-            alert('Error al registrar el producto');
+            alert('Error al registrar o actualizar el producto');
         }
     };
 
@@ -49,80 +57,116 @@ const RegistrarProducto = () => {
         }
     };
 
+    const handleEdit = (producto) => {
+        setEditingProduct(producto);
+        setNombre(producto.nombre);
+        setDescripcion(producto.descripcion);
+        setPrecio(producto.precio);
+        setStock(producto.stock);
+        setEditImagen(producto.imagen);
+    };
+
+    const handleDelete = async (id) => {
+        try {
+            const response = await axios.delete(`/api/productos/${id}`, {
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+            });
+            alert(response.data.message);
+            fetchProductos();
+        } catch (error) {
+            console.error(error);
+            alert('Error al eliminar el producto');
+        }
+    };
+
+    const clearForm = () => {
+        setNombre('');
+        setDescripcion('');
+        setPrecio('');
+        setStock('');
+        setImagen(null);
+        setEditingProduct(null);
+    };
+
     useEffect(() => {
         fetchProductos();
     }, []);
 
     return (
         <div className="container mt-4">
-            <h2 className="text-center mb-4">Registrar Producto</h2>
+            <h2 className="text-center mb-4">{editingProduct ? 'Editar Producto' : 'Registrar Producto'}</h2>
             <div className="card shadow p-4">
                 <form onSubmit={handleSubmit}>
                     <div className="mb-3">
                         <label className="form-label">Nombre</label>
-                        <input 
-                            type="text" 
-                            className="form-control" 
-                            placeholder="Nombre del producto" 
-                            value={nombre} 
-                            onChange={(e) => setNombre(e.target.value)} 
-                            required 
+                        <input
+                            type="text"
+                            className="form-control"
+                            value={nombre}
+                            onChange={(e) => setNombre(e.target.value)}
+                            required
                         />
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Descripción</label>
-                        <textarea 
-                            className="form-control" 
-                            placeholder="Descripción" 
-                            value={descripcion} 
-                            onChange={(e) => setDescripcion(e.target.value)} 
-                            required 
+                        <input
+                            type="text"
+                            className="form-control"
+                            value={descripcion}
+                            onChange={(e) => setDescripcion(e.target.value)}
+                            required
                         />
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Precio</label>
-                        <input 
-                            type="number" 
-                            className="form-control" 
-                            placeholder="Precio" 
-                            value={precio} 
-                            onChange={(e) => setPrecio(e.target.value)} 
-                            required 
+                        <input
+                            type="number"
+                            className="form-control"
+                            value={precio}
+                            onChange={(e) => setPrecio(e.target.value)}
+                            required
                         />
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Stock</label>
-                        <input 
-                            type="number" 
-                            className="form-control" 
-                            placeholder="Stock" 
-                            value={stock} 
-                            onChange={(e) => setStock(e.target.value)} 
-                            required 
+                        <input
+                            type="number"
+                            className="form-control"
+                            value={stock}
+                            onChange={(e) => setStock(e.target.value)}
+                            required
                         />
                     </div>
                     <div className="mb-3">
                         <label className="form-label">Imagen</label>
-                        <input 
-                            type="file" 
-                            className="form-control" 
-                            onChange={handleImageChange} 
+                        <input
+                            type="file"
+                            className="form-control"
+                            onChange={handleImageChange}
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary w-100">Registrar</button>
+                    <button type="submit" className="btn btn-primary">
+                        {editingProduct ? 'Actualizar Producto' : 'Registrar Producto'}
+                    </button>
+                    {editingProduct && (
+                        <button type="button" className="btn btn-secondary ms-2" onClick={clearForm}>
+                            Cancelar
+                        </button>
+                    )}
                 </form>
             </div>
 
-            <h2 className="text-center mt-5">Productos Registrados</h2>
+            <h2 className="text-center mt-4 mb-4">Productos Registrados</h2>
             <div className="table-responsive">
-                <table className="table table-striped table-hover mt-3">
-                    <thead className="table-dark">
+                <table className="table table-bordered">
+                    <thead>
                         <tr>
                             <th>Nombre</th>
                             <th>Descripción</th>
                             <th>Precio</th>
                             <th>Stock</th>
                             <th>Imagen</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -130,14 +174,30 @@ const RegistrarProducto = () => {
                             <tr key={producto.id}>
                                 <td>{producto.nombre}</td>
                                 <td>{producto.descripcion}</td>
-                                <td>${producto.precio}</td>
+                                <td>{producto.precio}</td>
                                 <td>{producto.stock}</td>
                                 <td>
-                                    {producto.imagen ? (
-                                        <img src={producto.imagen} alt={producto.nombre} className="img-fluid rounded" width="50" />
-                                    ) : (
-                                        'Sin imagen'
+                                    {producto.imagen && (
+                                        <img
+                                            src={producto.imagen}
+                                            alt={producto.nombre}
+                                            style={{ width: '50px', height: '50px' }}
+                                        />
                                     )}
+                                </td>
+                                <td>
+                                    <button
+                                        className="btn btn-warning me-2"
+                                        onClick={() => handleEdit(producto)}
+                                    >
+                                        Editar
+                                    </button>
+                                    <button
+                                        className="btn btn-danger"
+                                        onClick={() => handleDelete(producto.id)}
+                                    >
+                                        Eliminar
+                                    </button>
                                 </td>
                             </tr>
                         ))}
