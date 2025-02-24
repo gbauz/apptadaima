@@ -88,10 +88,14 @@ const Login = () => {
         <div style={styles.forgotPassword}>
           <a href="#">¿Olvidaste tu contraseña?</a>
         </div>
+        <div style={styles.registerLink}>
+          <p>¿No tienes cuenta? <a href="/registro">Regístrate</a></p>
+        </div>
       </div>
     </div>
   );
 };
+
 // Estilos internos en el componente
 const styles = {
   container: {
@@ -159,6 +163,10 @@ const styles = {
     cursor: 'pointer',
   },
   forgotPassword: {
+    textAlign: 'center',
+    marginTop: '10px',
+  },
+  registerLink: {
     textAlign: 'center',
     marginTop: '10px',
   },

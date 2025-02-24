@@ -164,10 +164,10 @@ function Dashboard() {
               </Nav.Link>
             )}
             <Nav.Link onClick={() => setSelectedOption("proveedormanga")} className="text-dark">
-              Registrar Proveedores
+              Ver productos registrados
             </Nav.Link>
             <Nav.Link onClick={() => setSelectedOption("settings")} className="text-dark">
-              Configuración
+              Asignaciones de roles 
             </Nav.Link>
           </Nav>
         </div>

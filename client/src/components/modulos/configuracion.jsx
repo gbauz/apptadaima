@@ -139,9 +139,9 @@ const Configuracion = () => {
             required
           >
             <option value="">Seleccione un rol</option>
-            <option value="1">Administrador</option>
-            <option value="2">Docente</option>
-            <option value="3">Secretaria</option>
+            <option value="1">Admin</option>
+            <option value="2">Empleado</option>
+            
           </select>
         </div>
         <div className="mb-4">
